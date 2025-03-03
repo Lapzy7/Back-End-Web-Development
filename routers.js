@@ -1,7 +1,35 @@
 const express = require("express");
 const routers = express.Router();
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
+
+const imageFilter = (req, file, cb) => {
+  if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+    return cb(null, false);
+  }
+  cb(null, true);
+};
+
+const upload = multer({ dest: "public", fileFilter: imageFilter });
 
 // Routing
+routers.post("/upload", upload.single("file"), (req, res) => {
+  const file = req.file;
+  if (file) {
+    const target = path.join(__dirname, "public", file.originalname);
+    fs.renameSync(file.path, target);
+    res.send("file berhasil diupload");
+  } else {
+    res.send("file gagal diupload");
+  }
+});
+
+routers.get("/download", (req, res) => {
+  const filename = "miao.jpg";
+  res.download(path.join(__dirname, "/download", filename), "miao.jpg");
+});
+
 routers.post("/login", (req, res) => {
   const { username, password } = req.body;
   res.status(200).json({
