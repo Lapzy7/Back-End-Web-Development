@@ -25,18 +25,27 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(
   cors({
     origin: "http://127.0.0.1:5500",
-    methods: ["GET", "PUT"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
 
 //Routing
 app.use(routers);
 
-//Middleware untuk 404
+// Routing 404
 app.use((req, res, next) => {
   res.status(404).json({
     status: "error",
     message: "resource tidak ditemukan",
+  });
+});
+
+//  Error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    status: "error",
+    message: "terjadi kesalahan pada server",
   });
 });
 
