@@ -3,6 +3,7 @@ const routers = express.Router();
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+const users = require("./users");
 
 const imageFilter = (req, file, cb) => {
   if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
@@ -13,7 +14,83 @@ const imageFilter = (req, file, cb) => {
 
 const upload = multer({ dest: "public", fileFilter: imageFilter });
 
-// Routing
+const findUser = (name) => {
+  return users.find((user) => user.name.toLowerCase() === name.toLowerCase());
+};
+
+// 1. GET: /users
+routers.get("/users", (req, res) => {
+  res.json(users);
+});
+
+// 2. GET: /users/:name
+routers.get("/users/:name", (req, res) => {
+  const user = findUser(req.params.name);
+
+  if (!user) {
+    return res.status(404).json({
+      message: "Data user tidak ditemukan",
+    });
+  }
+
+  res.json(user);
+});
+
+// 3. POST /users
+routers.post("/users", (req, res) => {
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({
+      message: "Masukan data yang akan diubah",
+    });
+  }
+
+  const newId =
+    users.length > 0 ? Math.max(...users.map((user) => user.id)) + 1 : 1;
+
+  const newUser = {
+    id: newId,
+    name: name,
+  };
+
+  users.push(newUser);
+  res.status(201).json({
+    status: "success",
+    message: "User berhasil ditambahkan",
+    data: newUser,
+  });
+});
+
+// 4. GET: /download
+routers.get("/download", (req, res) => {
+  const assetsDir = path.join(__dirname, "assets");
+
+  fs.readdir(assetsDir, (err, files) => {
+    if (err || files.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Tidak ada file gambar yang tersedia",
+      });
+    }
+
+    const imageFiles = files.filter((file) =>
+      file.match(/\.(jpg|jpeg|png|gif)$/i)
+    );
+
+    if (imageFiles.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Tidak ada file gambar yang tersedia",
+      });
+    }
+
+    const imagePath = path.join(assetsDir, imageFiles[0]);
+    res.sendFile(imagePath);
+  });
+});
+
+// 5. POST: /upload
 routers.post("/upload", upload.single("file"), (req, res) => {
   const file = req.file;
   if (file) {
@@ -25,56 +102,56 @@ routers.post("/upload", upload.single("file"), (req, res) => {
   }
 });
 
-routers.get("/download", (req, res) => {
-  const filename = "miao.jpg";
-  res.download(path.join(__dirname, "/download", filename), "miao.jpg");
-});
+// 6. PUT: /users/:name
+routers.put("/users/:name", (req, res) => {
+  const { name: newName } = req.body;
+  const userIndex = users.findIndex(
+    (user) => user.name.toLowerCase() === req.params.name.toLowerCase()
+  );
 
-routers.post("/login", (req, res) => {
-  const { username, password } = req.body;
-  res.status(200).json({
+  if (userIndex === -1) {
+    return res.status(404).json({
+      status: "error",
+      message: "User tidak ditemukan",
+    });
+  }
+
+  if (!newName) {
+    return res.status(400).json({
+      status: "error",
+      message: "Data name harus diisi",
+    });
+  }
+
+  users[userIndex].name = newName;
+
+  res.json({
     status: "success",
-    message: "Login page",
-    data: {
-      username: username,
-      password: password,
-    },
+    message: "User berhasil diupdate",
+    data: users[userIndex],
   });
 });
-routers.get("/", (req, res) => res.send("Hello World"));
-routers.get("/about", (req, res) =>
-  res.status(200).json({
+
+// 7. DELETE: /users/:name
+routers.delete("/users/:name", (req, res) => {
+  const userIndex = users.findIndex(
+    (user) => user.name.toLowerCase() === req.params.name.toLowerCase()
+  );
+
+  if (userIndex === -1) {
+    return res.status(404).json({
+      status: "error",
+      message: "User tidak ditemukan",
+    });
+  }
+
+  const deletedUser = users.splice(userIndex, 1)[0];
+
+  res.json({
     status: "success",
-    message: "About page",
-    data: [],
-  })
-);
-
-routers.put("/about", (req, res) =>
-  res.status(200).json({
-    status: "success",
-    message: "About page",
-    data: [],
-  })
-);
-
-routers.post("/contoh", (req, res) => res.send("request method POST"));
-routers.put("/contoh", (req, res) => res.send("Request method PUT"));
-routers.delete("/contoh", (req, res) => res.send("Request method DELETE"));
-routers.patch("/contoh", (req, res) => res.send("Request method PATCH"));
-
-routers.all("/universal", (req, res) =>
-  res.send(`Request method ${req.method}`)
-);
-// Routing dinamis
-// 1. Menggunakan params
-routers.get("/post/:id", (req, res) =>
-  res.send(`Artikel ke - ${req.params.id}`)
-);
-// 2. Menggunakan Query String
-routers.get("/post", (req, res) => {
-  const { page, sort } = req.query;
-  res.send(`Query string= page :${page}, sort : ${sort}`);
+    message: "User berhasil dihapus",
+    data: deletedUser,
+  });
 });
 
 module.exports = routers;
