@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
 const client = require("./mongodb");
+const ObjectId = require("mongodb").ObjectId;
 
 const imageFilter = (req, file, cb) => {
   if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
@@ -15,9 +16,10 @@ const imageFilter = (req, file, cb) => {
 const upload = multer({ dest: "public", fileFilter: imageFilter });
 
 // Routing
+// Get all users
 routers.get("/users", async (req, res) => {
   try {
-    const db = client.db("test");
+    const db = client.db("latihan");
     const users = await db.collection("users").find().toArray();
     res.json({
       status: "success",
@@ -26,9 +28,26 @@ routers.get("/users", async (req, res) => {
     });
   } catch (error) {
     res.json({
+      status: "error",
+    });
+  }
+});
+
+// Get single user
+routers.get("/users/:id", async (req, res) => {
+  try {
+    const db = client.db("latihan");
+    const user = await db.collection("users").findOne({
+      _id: new ObjectId(req.params.id),
+    });
+    res.status(200).json({
       status: "success",
-      message: "list users",
-      data: users,
+      message: "single user",
+      data: user,
+    });
+  } catch (error) {
+    res.json({
+      status: "error",
     });
   }
 });
@@ -37,7 +56,7 @@ routers.post("/upload", upload.single("file"), (req, res) => {
   const file = req.file;
   if (file) {
     const target = path.join(__dirname, "public", file.originalname);
-    fs.renameSync(file.path, target);
+    fs.renameSync(file.path, target); //rename file agar sama dengan original file name
     res.send("file berhasil diupload");
   } else {
     res.send("file gagal diupload");
@@ -45,8 +64,8 @@ routers.post("/upload", upload.single("file"), (req, res) => {
 });
 
 routers.get("/download", (req, res) => {
-  const filename = "miao.jpg";
-  res.download(path.join(__dirname, "/download", filename), "miao.jpg");
+  const filename = "dummy.png";
+  res.download(path.join(__dirname, "/download", filename), "dummy-photo.png");
 });
 
 routers.post("/login", (req, res) => {
@@ -68,7 +87,6 @@ routers.get("/about", (req, res) =>
     data: [],
   })
 );
-
 routers.put("/about", (req, res) =>
   res.status(200).json({
     status: "success",
@@ -76,7 +94,6 @@ routers.put("/about", (req, res) =>
     data: [],
   })
 );
-
 routers.post("/contoh", (req, res) => res.send("request method POST"));
 routers.put("/contoh", (req, res) => res.send("Request method PUT"));
 routers.delete("/contoh", (req, res) => res.send("Request method DELETE"));
