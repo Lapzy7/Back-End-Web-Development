@@ -19,7 +19,7 @@ const upload = multer({ dest: "public", fileFilter: imageFilter });
 // Get all users
 routers.get("/users", async (req, res) => {
   try {
-    const db = client.db("latihan");
+    const db = client.db("test");
     const users = await db.collection("users").find().toArray();
     res.json({
       status: "success",
@@ -36,7 +36,7 @@ routers.get("/users", async (req, res) => {
 // Get single user
 routers.get("/users/:id", async (req, res) => {
   try {
-    const db = client.db("latihan");
+    const db = client.db("test");
     const user = await db.collection("users").findOne({
       _id: new ObjectId(req.params.id),
     });
@@ -48,6 +48,107 @@ routers.get("/users/:id", async (req, res) => {
   } catch (error) {
     res.json({
       status: "error",
+    });
+  }
+});
+
+// Insert user
+routers.post("/users", async (req, res) => {
+  try {
+    const db = client.db("test");
+    const newUser = req.body; // Assuming the user data is sent in the request body
+    const result = await db.collection("users").insertOne(newUser);
+    res.status(201).json({
+      status: "success",
+      message: "User created",
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to create user",
+    });
+  }
+});
+// Update user
+routers.put("/users/:id", async (req, res) => {
+  try {
+    const db = client.db("test");
+    const userId = new ObjectId(req.params.id);
+    const updatedUser = req.body; // Assuming the updated user data is sent in the request body
+    const result = await db.collection("users").updateOne(
+      { _id: userId },
+      { $set: updatedUser }
+    );
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "User not found",
+      });
+    }
+    res.status(200).json({
+      status: "success",
+      message: "User updated",
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to update user",
+    });
+  }
+});
+// Delete user
+routers.delete("/users/:id", async (req, res) => {
+  try {
+    const db = client.db("test");
+    const userId = new ObjectId(req.params.id);
+    const result = await db.collection("users").deleteOne({ _id: userId });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "User not found",
+      });
+    }
+    res.status(200).json({
+      status: "success",
+      message: "User deleted",
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to delete user",
+    });
+  }
+});
+// Get orders for a user (join/aggregate)
+routers.get("/users/:id/orders", async (req, res) => {
+  try {
+    const db = client.db("test");
+    const userId = new ObjectId(req.params.id);
+    const orders = await db.collection("orders").aggregate([
+      {
+        $match: { userId: userId }, // Match orders for the specific user
+      },
+      {
+        $lookup: {
+          from: "users", // Join with users collection
+          localField: "userId", // Field from orders
+          foreignField: "_id", // Field from users
+          as: "userDetails", // Output array field
+        },
+      },
+      {
+        $unwind: "$userDetails", // Unwind to get user details in the order object
+      },
+    ]).toArray();
+    res.status(200).json({
+      status: "success",
+      message: "Orders retrieved",
+      data: orders,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to retrieve orders",
     });
   }
 });
