@@ -3,8 +3,10 @@ const routers = express.Router();
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
-const client = require("./mongodb");
-const ObjectId = require("mongodb").ObjectId;
+// const client = require("./mongodb");
+// const ObjectId = require("mongodb").ObjectId;
+require("./mongoose");
+const Users = require("./User");
 
 const imageFilter = (req, file, cb) => {
   if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
@@ -18,19 +20,36 @@ const upload = multer({ dest: "public", fileFilter: imageFilter });
 // Routing
 // Get all users
 routers.get("/users", async (req, res) => {
-  try {
-    const db = client.db("test");
-    const users = await db.collection("users").find().toArray();
-    res.json({
-      status: "success",
-      message: "list users",
-      data: users,
-    });
-  } catch (error) {
-    res.json({
-      status: "error",
-    });
-  }
+  const users = await Users.find();
+  res.json({
+    status: "success!!!",
+    message: "list users",
+    data: users,
+  });
+});
+
+routers.get("/users/:id", async (req, res) => {
+  id = req.params.id;
+  const users = await Users.findById(id);
+  res.json({
+    status: "success",
+    message: "list users",
+    data: users,
+  });
+});
+
+routers.post("/users", async (req, res) => {
+  const { name, age, status } = req.body;
+  const newUser = await Users.create({
+    name: name,
+    age: age,
+    status: status,
+  });
+  res.json({
+    status: "success",
+    message: "insert users",
+    data: newUser,
+  });
 });
 
 // Get single user
